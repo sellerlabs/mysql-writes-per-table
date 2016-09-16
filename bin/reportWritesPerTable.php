@@ -104,8 +104,8 @@ while ($row = mysql_fetch_array($result, MYSQL_ASSOC)) {
 unlink($tmpfile);
 
 $overallElapsed = $lastTimestamp - $overallStartTimestamp;
-echo "ALL DONE WITH ALL AVAILABLE BINARY LOGS\n";
-echo "Parsed ".number_format($overallLineCount)." lines representing {$overallElapsed} seconds between";
+echo "\nALL DONE WITH ALL AVAILABLE BINARY LOGS\n";
+echo "\nParsed ".number_format($overallLineCount)." lines representing {$overallElapsed} seconds between";
 echo date('Y-m-d H:i:s', $overallStartTimestamp)." and ". date('Y-m-d H:i:s', $lastTimestamp)."\n";
 foreach ($overallSummary as $database => $tableDetail) {
     foreach ($tableDetail as $table => $actionDetail) {
