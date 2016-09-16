@@ -21,7 +21,6 @@ $hostName = "{$host}:{$port}";
 $link = mysql_connect($hostName, $user, $pass)
     or die('Could not connect: ' . mysql_error());
 
-
 $result = mysql_query('SHOW BINARY LOGS');
 
 $summary = [];
@@ -61,16 +60,20 @@ while ($row = mysql_fetch_array($result, MYSQL_ASSOC)) {
         $lineCount++;
         $function = null;
         $table    = null;
-        if (preg_match('#(^update|^insert|^delete|^replace|^alter) `(.*?)`#i', $line, $matches)) {
+        if (preg_match('#^(update|insert +into|delete +from|replace +into|alter +table) +([^ \(]*)#i', $line, $matches)) {
             $database = 'DEFAULT';
-            $function = strtolower(trim($matches[1]));
-            $table    = strtolower(trim($matches[2]));
+            $function = strtolower(str_replace('`', '', trim($matches[1])));
+            $table    = strtolower(str_replace('`', '', trim($matches[2])));
+            if (preg_match('#(.*)\.(.*)#', $table, $tableMatches)) {
+                $database = $tableMatches[1];
+                $table    = $tableMatches[2];
+            }
         }
 
-        if (preg_match('/^### (update|insert|delete|replace|alter) `(.*?)`\.`(.*?)`/i', $line, $matches)) {
-            $function = strtolower(trim($matches[1]));
-            $database = strtolower(trim($matches[2]));
-            $table    = strtolower(trim($matches[3]));
+        if (preg_match('/^### (update|insert +into|delete +from|replace +into|alter +table) `(.*?)`\.`(.*?)`/i', $line, $matches)) {
+            $function = strtolower(str_replace('`', '', trim($matches[1])));
+            $database = strtolower(str_replace('`', '', trim($matches[2])));
+            $table    = strtolower(str_replace('`', '', trim($matches[3])));
         }
 
         if ($function && $table) {
@@ -87,7 +90,7 @@ while ($row = mysql_fetch_array($result, MYSQL_ASSOC)) {
     foreach ($fileSummary as $database => $tableDetail) {
         foreach ($tableDetail as $table => $actionDetail) {
             foreach ($actionDetail as $action => $count) {
-                printf("%-20s %-20s %10s = %d\n", $database, $table, $action, $count);
+                printf("%-30s %-30s %-15s = %d\n", $database, $table, $action, $count);
 
                 if (!isset($overallSummary[$database][$table][$action])) {
                     $overallSummary[$database][$table][$action] = 0;
@@ -105,12 +108,12 @@ unlink($tmpfile);
 
 $overallElapsed = $lastTimestamp - $overallStartTimestamp;
 echo "\nALL DONE WITH ALL AVAILABLE BINARY LOGS\n";
-echo "\nParsed ".number_format($overallLineCount)." lines representing {$overallElapsed} seconds between";
+echo "\nParsed ".number_format($overallLineCount)." lines representing {$overallElapsed} seconds between ";
 echo date('Y-m-d H:i:s', $overallStartTimestamp)." and ". date('Y-m-d H:i:s', $lastTimestamp)."\n";
 foreach ($overallSummary as $database => $tableDetail) {
     foreach ($tableDetail as $table => $actionDetail) {
         foreach ($actionDetail as $action => $count) {
-            printf("%-20s %-20s %10s = %d\n", $database, $table, $action, $count);
+            printf("%-30s %-30s %-15s = %d\n", $database, $table, $action, $count);
         }
     }
 }
